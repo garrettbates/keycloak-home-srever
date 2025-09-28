@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}
+    container_name: ${KEYCLOAK_CONTAINER_NAME}
+    command: >
+      start
+      --http-enabled=true
+      --http-port=${KEYCLOAK_HTTP_PORT}
+      --proxy=edge
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME}                      # e.g., https://auth.example.com
+      KC_HOSTNAME_ADMIN: ${KEYCLOAK_HOSTNAME_ADMIN}  # e.g., https://admin-auth.example.com
+      KC_HTTP_RELATIVE_PATH: ${KEYCLOAK_RELATIVE_PATH}
+    ports:
+      # Optional: expose locally for debugging
+      - "${KEYCLOAK_HTTP_PORT}:${KEYCLOAK_HTTP_PORT}"
+    restart: unless-stopped
+    networks: [ appnet ]
+
+  cloudflared:
+    image: cloudflare/cloudflared:${CLOUDFLARED_VERSION}
+    container_name: ${CLOUDFLARED_CONTAINER_NAME}
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      - keycloak
+    restart: unless-stopped
+    networks: [ appnet ]
+
+networks:
+  appnet:
+    driver: bridge
